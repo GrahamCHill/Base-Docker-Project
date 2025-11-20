@@ -1,0 +1,109 @@
+services:
+  ######################################################################
+  ## TRAEFIK — Reverse Proxy
+  ######################################################################
+  traefik:
+    image: traefik:v3.0
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedByDefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./infra/traefik/acme.json:/acme.json
+      - ./infra/traefik/traefik.yml:/etc/traefik/traefik.yml
+      - ./infra/traefik/logs:/logs
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.test`)"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.routers.traefik.entrypoints=web"
+
+  ######################################################################
+  ## FRONTEND — React + NGINX
+  ######################################################################
+  frontend:
+    build: ./frontend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`app.test`)"
+      - "traefik.http.routers.frontend.entrypoints=web"
+      - "traefik.http.services.frontend.loadbalancer.server.port=80"
+    depends_on:
+      - backend-python
+
+  ######################################################################
+  ## PYTHON API — Main Backend
+  ######################################################################
+  backend-python:
+    build: ./backend-python
+    env_file: .env
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=Host(`api.test`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.api.entrypoints=web"
+      - "traefik.http.services.api.loadbalancer.server.port=8000"
+    depends_on:
+      - db
+
+  ######################################################################
+  ## GO SERVICE — Internal only (no public exposure)
+  ######################################################################
+  backend-go:
+    build: ./backend-go
+    env_file: .env
+    expose:
+      - "9000"
+    labels:
+      - "traefik.enable=false"
+    depends_on:
+      - db
+
+  ######################################################################
+  ## POSTGRESQL — Startup SQL + audit tables
+  ######################################################################
+  db:
+    image: postgres:16
+    env_file: .env
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./db/audit.sql:/docker-entrypoint-initdb.d/audit.sql
+
+  ######################################################################
+  ## LOKI — Central Log Storage
+  ######################################################################
+  loki:
+    image: grafana/loki:2.9.0
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./infra/loki:/etc/loki
+
+  ######################################################################
+  ## VECTOR — Collect logs from all Docker containers
+  ######################################################################
+  vector:
+    image: timberio/vector:0.38.0-alpine
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./infra/vector/vector.toml:/etc/vector/vector.toml
+    depends_on:
+      - loki
+
+  ######################################################################
+  ## GRAFANA — Dashboards for logs
+  ######################################################################
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    depends_on:
+      - loki
+
+volumes:
+  db_data:

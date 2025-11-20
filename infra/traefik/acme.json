@@ -1,0 +1,2 @@
+touch infra/traefik/acme.json
+chmod 600 infra/traefik/acme.json
