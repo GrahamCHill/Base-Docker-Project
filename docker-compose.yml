@@ -79,19 +79,24 @@ services:
   ######################################################################
   loki:
     image: grafana/loki:2.9.0
+    command: -config.file=/etc/loki/local-config.yaml
+    user: "0:0"  # REQUIRED for macOS Docker permissions
     ports:
       - "3100:3100"
     volumes:
       - ./infra/loki:/etc/loki
+      - loki_data:/loki
+      - loki_wal:/wal
 
   ######################################################################
   ## VECTOR — Collect logs from all Docker containers
   ######################################################################
   vector:
     image: timberio/vector:0.38.0-alpine
+    command: [ "--config", "/etc/vector/vector.toml" ]
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./infra/vector/vector.toml:/etc/vector/vector.toml
+      - ./infra/vector:/etc/vector
     depends_on:
       - loki
 
@@ -107,3 +112,6 @@ services:
 
 volumes:
   db_data:
+  loki_data:
+  loki_wal:
+
