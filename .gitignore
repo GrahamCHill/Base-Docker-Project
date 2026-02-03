@@ -11,3 +11,4 @@
 /.env
 /infra/traefik/logs/
 /.idea/
+.DS_Store

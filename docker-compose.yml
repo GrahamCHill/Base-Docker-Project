@@ -71,8 +71,7 @@ services:
     env_file: .env
     volumes:
       - db_data:/var/lib/postgresql/data
-      - ./db/00-init.sql:/docker-entrypoint-initdb.d/00-init.sql
-      - ./db/01-audit.sql:/docker-entrypoint-initdb.d/01-audit.sql
+      - ./db:/docker-entrypoint-initdb.d:ro
 
   ######################################################################
   ## LOKI — Central Log Storage
