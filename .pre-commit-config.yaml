@@ -1,25 +1,54 @@
-repos :
-  - repo : https://github.com/pre-commit/pre-commit-hooks
-    rev : v4.6.0
-    hooks :
-      - id : check-added-large-files
-      - id : check-merge-conflict
-      - id : trailing-whitespace
-  - repo : https://github.com/pre-commit/mirrors-clang-format
-    rev : v18.1.0
-    hooks :
-      - id : clang-format
-  - repo : https://github.com/pycqa/flake8
-    rev : 7.0.0
-    hooks :
-    - id : flake8
-  - repo : https://github.com/pre-commit/mirrors-eslint
-    rev : v9.0.0
-    hooks :
-    - id : eslint
-  - repo : local
-    hooks :
-    - id : naming-guard
-      name : Naming Escalation Guard
-      entry : ./scripts/naming_guard.sh
-      language : system
+exclude: |
+  (?x)^(
+    node_modules/|
+    dist/|
+    build/|
+    coverage/|
+    .next/|
+    .cache/|
+    __pycache__/|
+    .*\.min\.(js|css)$|
+    .*\.map$
+  )
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: check-added-large-files
+        args: ['--maxkb=256']
+      - id: check-merge-conflict
+      - id: trailing-whitespace
+
+  - repo: https://github.com/psf/black
+    rev: 24.1.0
+    hooks:
+      - id: black
+        language_version: python3
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.0.0
+    hooks:
+      - id: flake8
+
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v18.1.0
+    hooks:
+      - id: clang-format
+
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v9.0.0
+    hooks:
+      - id: eslint
+        files: \.(js|jsx|ts|tsx|vue)$
+        types: [file]
+
+
+  - repo: local
+    hooks:
+      - id: naming-guard
+        name: Naming Escalation Guard
+        entry: bash scripts/naming_guard.sh
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
